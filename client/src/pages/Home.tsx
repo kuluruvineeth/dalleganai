@@ -1,0 +1,120 @@
+import { useState } from "react";
+import Header from "../components/Header";
+import SizeSelector from "../components/SizeSelector";
+import { IMAGE_SIZES } from "../constant";
+import { ImageModalState } from "../types/types";
+import imageService from "../services/image.service";
+import classNames from "classnames";
+import { getSurprisePrompt } from "../utils";
+import Explore from "../components/Explore";
+import ImageModal from "../components/ImageModal";
+import ErrorModal from "../components/ErrorModal";
+
+const Home = () => {
+  const [sizeValue, setSizeValue] = useState(IMAGE_SIZES[0].value);
+
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const [imageModalState, setImageModalState] = useState<ImageModalState>({
+    imgSrc: null,
+    open: false,
+    prompt: "",
+  });
+  const [prompt, setPrompt] = useState("");
+  const [errorModelOpen, setErrorModelOpen] = useState(false);
+
+  const generateImage = async () => {
+    try {
+      setIsGenerating(true);
+      const res = await imageService.generateImage({
+        prompt,
+        size: sizeValue,
+      });
+
+      setIsGenerating(false);
+
+      if (res.status === 201 || res.status === 200) {
+        const imageUrl = res?.data?.data?.imageUrl;
+
+        setImageModalState((pre) => ({
+          ...pre,
+          imgSrc: imageUrl,
+          open: true,
+          prompt: prompt,
+        }));
+      } else {
+        setErrorModelOpen(true);
+      }
+    } catch (error) {
+      setErrorModelOpen(true);
+    }
+  };
+  return (
+    <div>
+      <Header />
+      <div className="container mx-auto max-w-screen-xl px-2">
+        <h1 className="mt-16 pb-7 sm:mt-20 animate-text text-center bg-gradient-to-r from-teal-500 via-purple-500 to-orange-500 bg-clip-text text-transparent text-5xl sm:7xl font-black">
+          Text to image with DALLE GAN AI
+        </h1>
+        <p className="text-center">
+          Unleash your creativity using our platform and experience the
+          awe-inspiring capabilities of computer-generated imagery!
+        </p>
+        <div className="max-w-screen-xl mt-10 mx-auto">
+          <div className="mb-6 flex space-y-5 flex-col sm:flex-row sm:items-baseline sm:space-x-5">
+            <div className="flex w-full row space-x-2 items-center">
+              <input
+                type="text"
+                value={prompt}
+                placeholder="Describe what you want the AI to draw"
+                onChange={(e) => setPrompt(e.target.value)}
+                className="block w-full p-4 text-gray-700 border border-gray-300 rounded-lg bg-gray-50 sm:text-md focus:ring-blue-500 focus:border-purple-500"
+              />
+              <SizeSelector
+                value={sizeValue}
+                onValueChange={(value) => {
+                  setSizeValue(value);
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={generateImage}
+              className={classNames(
+                "text-white btn capitalize border-none bg-gradient-to-r from-purple-500 to-pink-500 hover:bg-gradient-to-l focus:ring-2 focus:outline-none focus:ring-purple-200 dark:focus:ring-purple-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center",
+                { "btn-disabled": prompt === "" },
+                { loading: isGenerating }
+              )}
+            >
+              {isGenerating ? "Generating..." : "Generate"}
+            </button>
+          </div>
+          <div className="pl-1">
+            <h2 className="inline-block mr-2 font-bold text-sm sm:text-base">
+              No Inspiration ? Try &rArr;
+            </h2>
+            <button
+              className="btn btn-xs sm:btn-sm btn-outline capitalize"
+              onClick={() => {
+                setPrompt(getSurprisePrompt(prompt));
+              }}
+            >
+              Surprise Me
+            </button>
+          </div>
+        </div>
+      </div>
+      <Explore setImageModalState={setImageModalState} />
+
+      <div className="mb-16"></div>
+
+      <ImageModal
+        dialogState={imageModalState}
+        setDialogState={setImageModalState}
+      />
+      <ErrorModal open={errorModelOpen} setIsOpen={setErrorModelOpen} />
+    </div>
+  );
+};
+
+export default Home;
